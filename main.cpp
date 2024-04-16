@@ -352,7 +352,187 @@ void feedbackQ2i()
     fillInWaitTime();
 }
 
+void aging(int originalQuantum)
+{
+    vector<tuple<int,int,int>>v; //tuple of priority level, process index and total waiting time
+    int j=0,currentProcess=-1;
+    for(int time =0;time<last_instant;time++){
+        while(j<process_count && getArrivalTime(processes[j])<=time){
+            v.push_back(make_tuple(getPriorityLevel(processes[j]),j,0));
+            j++;
+        }
+
+        for(int i=0;i<v.size();i++){
+            if(get<1>(v[i])==currentProcess){
+                get<2>(v[i])=0;
+                get<0>(v[i])=getPriorityLevel(processes[currentProcess]);
+            }
+            else{
+                get<0>(v[i])++;
+                get<2>(v[i])++;
+            }
+        }
+        sort(v.begin(),v.end(),byPriorityLevel);
+        currentProcess=get<1>(v[0]);
+        int currentQuantum = originalQuantum;
+        while(currentQuantum-- && time<last_instant){
+            timeline[time][currentProcess]='*';
+            time++;
+        }
+        time--;
+    }
+    fillInWaitTime();
+}
+
+void printAlgorithm(int algorithm_index)
+{
+    int algorithm_id = algorithms[algorithm_index].first - '0';
+    if(algorithm_id==2)
+        cout << ALGORITHMS[algorithm_id] <<algorithms[algorithm_index].second <<endl;
+    else
+        cout << ALGORITHMS[algorithm_id] << endl;
+}
+
+void printProcesses()
+{
+    cout << "Process    ";
+    for (int i = 0; i < process_count; i++)
+        cout << "|  " << getProcessName(processes[i]) << "  ";
+    cout << "|\n";
+}
+void printArrivalTime()
+{
+    cout << "Arrival    ";
+    for (int i = 0; i < process_count; i++)
+        printf("|%3d  ",getArrivalTime(processes[i]));
+    cout<<"|\n";
+}
+void printServiceTime()
+{
+    cout << "Service    |";
+    for (int i = 0; i < process_count; i++)
+        printf("%3d  |",getServiceTime(processes[i]));
+    cout << " Mean|\n";
+}
+void printFinishTime()
+{
+    cout << "Finish     ";
+    for (int i = 0; i < process_count; i++)
+        printf("|%3d  ",finishTime[i]);
+    cout << "|-----|\n";
+}
+void printTurnAroundTime()
+{
+    cout << "Turnaround |";
+    int sum = 0;
+    for (int i = 0; i < process_count; i++)
+    {
+        printf("%3d  |",turnAroundTime[i]);
+        sum += turnAroundTime[i];
+    }
+    if((1.0 * sum / turnAroundTime.size())>=10)
+		printf("%2.2f|\n",(1.0 * sum / turnAroundTime.size()));
+    else
+	 	printf(" %2.2f|\n",(1.0 * sum / turnAroundTime.size()));
+}
+
+void printNormTurn()
+{
+    cout << "NormTurn   |";
+    float sum = 0;
+    for (int i = 0; i < process_count; i++)
+    {
+        if( normTurn[i]>=10 )
+            printf("%2.2f|",normTurn[i]);
+        else
+            printf(" %2.2f|",normTurn[i]);
+        sum += normTurn[i];
+    }
+
+    if( (1.0 * sum / normTurn.size()) >=10 )
+        printf("%2.2f|\n",(1.0 * sum / normTurn.size()));
+	else
+        printf(" %2.2f|\n",(1.0 * sum / normTurn.size()));
+}
+void printStats(int algorithm_index)
+{
+    printAlgorithm(algorithm_index);
+    printProcesses();
+    printArrivalTime();
+    printServiceTime();
+    printFinishTime();
+    printTurnAroundTime();
+    printNormTurn();
+}
+void printTimeline(int algorithm_index)
+{
+    for (int i = 0; i <= last_instant; i++)
+        cout << i % 10<<" ";
+    cout <<"\n";
+    cout << "------------------------------------------------\n";
+    for (int i = 0; i < process_count; i++)
+    {
+        cout << getProcessName(processes[i]) << "     |";
+        for (int j = 0; j < last_instant; j++)
+        {
+            cout << timeline[j][i]<<"|";
+        }
+        cout << " \n";
+    }
+    cout << "------------------------------------------------\n";
+}
+void execute_algorithm(char algorithm_id, int quantum,string operation)
+{
+    switch (algorithm_id)
+    {
+    case '1':
+        if(operation==TRACE)cout<<"FCFS  ";
+        firstComeFirstServe();
+        break;
+    case '2':
+        if(operation==TRACE)cout<<"RR-"<<quantum<<"  ";
+        roundRobin(quantum);
+        break;
+    case '3':
+        if(operation==TRACE)cout<<"SPN   ";
+        shortestProcessNext();
+        break;
+    case '4':
+        if(operation==TRACE)cout<<"SRT   ";
+        shortestRemainingTime();
+        break;
+    case '5':
+        if(operation==TRACE)cout<<"HRRN  ";
+        highestResponseRatioNext();
+        break;
+    case '6':
+        if(operation==TRACE)cout<<"FB-1  ";
+        feedbackQ1();
+        break;
+    case '7':
+        if(operation==TRACE)cout<<"FB-2i ";
+        feedbackQ2i();
+        break;
+    case '8':
+        if(operation==TRACE)cout<<"Aging ";
+        aging(quantum);
+        break;
+    default:
+        break;
+    }
+}
+
 int main(){
-    
+    parse();
+    for (int idx = 0; idx < (int)algorithms.size(); idx++)
+    {
+        clear_timeline();
+        execute_algorithm(algorithms[idx].first, algorithms[idx].second,operation);
+        if (operation == TRACE)
+            printTimeline(idx);
+        else if (operation == SHOW_STATISTICS)
+            printStats(idx);
+        cout << "\n";
+    }
     return 0;
 }
